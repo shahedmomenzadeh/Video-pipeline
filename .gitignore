@@ -1,0 +1,35 @@
+
+# Ignore video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+
+# Ignore audio files
+*.mp3
+*.wav
+*.flac
+*.aac
+
+# Ignore image files
+*.jpg
+*.png
+*.gif
+
+#ignore json files 
+*.json
+
+Video_Process_pipeline.ipynb
+ytdl.py
+
+__pycache__/
+*.pyc
+.env
+
+# Ingore CSV files
+*.csv
+
+#ignore .txt files
+*.txt
+
+
