@@ -2,9 +2,13 @@
 yt-dlp
 pandas
 shutil
-whisper
-torch
+git+https://github.com/openai/whisper.git # Whisper from source
 cerebras-cloud-sdk
 tqdm
 python-dotenv
 pyyaml
+
+# For PyTorch with CUDA 12.6
+--index-url https://download.pytorch.org/whl/cu126
+torch
+torchvision
