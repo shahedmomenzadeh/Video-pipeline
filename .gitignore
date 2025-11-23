@@ -29,7 +29,12 @@ __pycache__/
 # Ingore CSV files
 *.csv
 
-#ignore .txt files
+# ignore .txt files
 *.txt
+
+# but keep these
+!youtube_links.txt
+!requirements.txt
+
 
 

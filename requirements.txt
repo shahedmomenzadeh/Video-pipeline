@@ -1,0 +1,10 @@
+# Add Python dependencies here
+yt-dlp
+pandas
+shutil
+whisper
+torch
+cerebras-cloud-sdk
+tqdm
+python-dotenv
+pyyaml
