@@ -1,0 +1,30 @@
+# Directory Configuration
+directories:
+  videos: "./videos"
+  audio: "./audio"
+  transcripts: "./transcripts"
+  refined_transcripts: "./refined_transcripts"
+
+# Files
+files:
+  metadata_csv: "video_metadata.csv" # Will be joined with video directory path
+  cookies: "www.youtube.com_cookies.txt"
+  refinement_log: "refinement_log.csv" # Will be joined with refined directory path
+  video_links: "videos_link.txt" # File containing one URL per line
+  dataset_summary: "dataset_info.csv" # The final summary file name
+
+# Download Settings
+download:
+  max_duration_seconds: 1500
+
+# Transcription Settings
+whisper:
+  model_size: "large"
+  device: "cuda" # or 'cpu'
+
+# Refinement Settings
+cerebras:
+  model: "qwen-3-235b-a22b-instruct-2507"
+  api_call_delay_seconds: 20
+  max_files_per_run: 300
+  # Set CEREBRAS_API_KEY in your environment variables or .env file
