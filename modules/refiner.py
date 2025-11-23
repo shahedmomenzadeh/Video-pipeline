@@ -1,4 +1,3 @@
-# LLM (Cerebras) text cleaning logic
 import os
 import json
 import time
@@ -20,16 +19,32 @@ Your job is to fix errors **only** in the "text" fields.
 5.  The output must be the pure, corrected JSON data and nothing else."""
 
 def get_api_key():
-    # Try loading from .env file locally
+    """
+    Retrieves the API key with the following priority:
+    1. Google Colab Secrets (userdata)
+    2. Local .env file / System Environment Variables
+    """
+    # 1. Try Google Colab first
+    try:
+        from google.colab import userdata
+        key = userdata.get('CEREBRAS_API_KEY')
+        if key:
+            print("🔑 Found API Key in Google Colab secrets.")
+            return key
+    except ImportError:
+        # Not running in Colab, strictly local
+        pass
+    except Exception as e:
+        # In Colab but key might be missing
+        print(f"⚠️ Colab environment detected, but failed to load secret: {e}")
+
+    # 2. Fallback to Local .env or System Environment
     load_dotenv()
     key = os.getenv("CEREBRAS_API_KEY")
-    # Fallback for Colab env if needed, though this script is designed for local use now
-    if not key:
-        try:
-            from google.colab import userdata
-            key = userdata.get('CEREBRAS_API_KEY')
-        except ImportError:
-            pass
+    
+    if key:
+        print("🔑 Found API Key in local environment/.env.")
+    
     return key
 
 def parse_llm_json_output(raw_output: str) -> str:
@@ -109,7 +124,7 @@ def run_refiner_pipeline(input_dir, videos_dir, refined_output_dir, log_path, mo
 
     api_key = get_api_key()
     if not api_key:
-        print("❌ CEREBRAS_API_KEY not found in environment variables or .env file!")
+        print("❌ CEREBRAS_API_KEY not found! Please set it in Colab Secrets or your .env file.")
         return
 
     client = Cerebras(api_key=api_key)
