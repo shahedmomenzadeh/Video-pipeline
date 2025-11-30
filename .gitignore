@@ -37,4 +37,5 @@ __pycache__/
 !requirements.txt
 
 
-
+# ignoring tests
+apitest.py

@@ -20,8 +20,8 @@ Before running the project, ensure you have the following installed:
 
 - **Python 3.8+**
 - **FFmpeg**: This is critical for audio extraction.
-  - Ubuntu/Debian: ```bash sudo apt update && sudo apt install ffmpeg ```
-  - MacOS: ```bash brew install ffmpeg ```
+  - Ubuntu/Debian: ```sudo apt update && sudo apt install ffmpeg ```
+  - MacOS: ```brew install ffmpeg ```
   - Windows: Download FFmpeg and add it to your System PATH.
 - **Cerebras API Key**: You need an API key to run the refinement step.
 
