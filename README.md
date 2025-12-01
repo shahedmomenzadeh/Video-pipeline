@@ -1,18 +1,19 @@
 # Video Processing Pipeline (Modular)
 
-This project is a comprehensive pipeline designed to create high-quality text datasets from YouTube videos (specifically targeted at medical/surgical content, but applicable generally).
+This project is a comprehensive pipeline designed to create high-quality text and Vision-Language Model (VLM) datasets from YouTube videos (specifically targeted at medical/surgical content, but applicable generally).
 
-The pipeline automates the process of downloading videos, extracting audio, transcribing speech using OpenAI Whisper, refining the text using the Cerebras LLM, and generating a final summary dataset.
+The pipeline automates the process of downloading videos, extracting audio, transcribing speech using OpenAI Whisper, refining the text using the Cerebras LLM, and generating a structured VLM dataset using Google Gemini models.
 
 ## 🚀 Features
 
-The pipeline runs in 5 sequential steps:
+The pipeline runs in 6 sequential steps:
 
 1. **Ingestion**: Downloads videos and extracts audio (16kHz WAV) using yt-dlp and FFmpeg.
 2. **Hygiene**: Automatically deletes videos that exceed a specific duration threshold (to avoid processing overly long files).
 3. **Transcription**: Generates timestamped transcripts using OpenAI's Whisper model.
 4. **Refinement**: Uses the Cerebras LLM to correct grammar and medical terminology while preserving timestamps.
-5. **Reporting**: Merges metadata and processing logs into a final dataset_info.csv summary file.
+5. **Reporting**: Merges metadata and processing logs into a final `dataset_info.csv` summary file.
+6. **VLM Dataset Generation**: Uses a two-stage Google Gemini pipeline (Gatekeeper & Analyst) to generate a structured JSONL dataset for VLM fine-tuning, including visual descriptions, surgical steps, and instrument identification.
 
 ## 🛠️ Prerequisites
 
@@ -20,10 +21,12 @@ Before running the project, ensure you have the following installed:
 
 - **Python 3.8+**
 - **FFmpeg**: This is critical for audio extraction.
-  - Ubuntu/Debian: ```bash sudo apt update && sudo apt install ffmpeg ```
-  - MacOS: ```bash brew install ffmpeg ```
+  - Ubuntu/Debian: `sudo apt update && sudo apt install ffmpeg`
+  - MacOS: `brew install ffmpeg`
   - Windows: Download FFmpeg and add it to your System PATH.
-- **Cerebras API Key**: You need an API key to run the refinement step.
+- **API Keys**:
+  - **Cerebras API Key**: For the text refinement step.
+  - **Google Gemini API Key**: For the VLM dataset generation step.
 
 ## 📥 Installation
 
@@ -46,7 +49,7 @@ pip install -r requirements.txt
 
 ### 1. The config.yaml File
 
-All settings are managed in `config.yaml`. You do not need to modify the Python code directly.
+All settings are managed in `config.yaml`.
 
 ```yaml
 # Directory Configuration
@@ -55,6 +58,7 @@ directories:
   audio: "./audio"                # Where extracted WAV files are stored
   transcripts: "./transcripts"    # Raw Whisper JSON outputs
   refined_transcripts: "./refined_transcripts" # Final LLM-cleaned text
+  vlm_dataset: "./vlm_dataset"    # New: Where JSONL files are stored
 
 # Download Settings
 download:
@@ -64,6 +68,13 @@ download:
 whisper:
   model_size: "large"             # Options: tiny, base, small, medium, large
   device: "cuda"                  # Use 'cuda' for GPU, 'cpu' for CPU
+
+# VLM Settings (New)
+vlm:
+  gatekeeper_model: "gemini-2.0-flash" # Fast model for quality checks
+  generator_model: "gemini-2.0-flash"  # Powerful model for video analysis
+  aggregate_file: "vlm_dataset_all.jsonl"
+  log_file: "process_log.csv"
 ```
 
 ### 2. Adding Video Links
@@ -79,7 +90,7 @@ https://youtu.be/example2
 
 To avoid download errors with restricted videos, you must provide a cookies file.
 
-1. Install the Get cookies.txt LOCALLY Chrome extension: https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc
+1. Install the "Get cookies.txt" Chrome extension.
 2. Go to YouTube.com and log in.
 3. Click the extension icon and select "Export".
 4. Rename the downloaded file to `www.youtube.com_cookies.txt`.
@@ -89,30 +100,41 @@ To avoid download errors with restricted videos, you must provide a cookies file
 
 ### Set up your Environment Variables
 
-Create a file named `.env` in the root directory and add your key:
+Create a file named `.env` in the root directory and add your keys:
 
 ```bash
-CEREBRAS_API_KEY=your_actual_api_key_here
+CEREBRAS_API_KEY=your_cerebras_key
+GEMINI_API_KEY=your_gemini_key
 ```
 
 ### Run the Pipeline
+
+You can run the entire pipeline or specific steps using the `--step` argument.
+
+**Run Everything (Steps 1-6):**
 
 ```bash
 python main.py
 ```
 
-The script will automatically detect the key in the `.env` file.
+**Run Only the VLM Step:**
+
+```bash
+python main.py --step vlm
+```
+
+**Available Steps:** `download`, `clean`, `transcribe`, `refine`, `summarize`, `vlm`, `all`.
 
 ## ☁️ How to Run in Google Colab
 
 The script is optimized for Colab. You do not need a `.env` file there.
 
 1. Clone the repository inside a Colab cell.
-2. Add your API Key to Colab Secrets:
+2. Add your API Keys to Colab Secrets:
    - Click the Key icon (Secrets) on the left sidebar.
-   - Name: `CEREBRAS_API_KEY`
-   - Value: `your_actual_key`
-   - Toggle "Notebook access" to On.
+   - Name: `CEREBRAS_API_KEY`, Value: `your_key`
+   - Name: `GEMINI_API_KEY`, Value: `your_key`
+   - Toggle "Notebook access" to **On** for both.
 3. Run the Pipeline using this code block:
 
 ```python
@@ -126,15 +148,16 @@ import os
 # 2. Install requirements
 !pip install -r requirements.txt
 
-# 3. Get the API Key securely
-try:
-    api_key = userdata.get('CEREBRAS_API_KEY')
-except Exception:
-    api_key = ""
-    print("Warning: CEREBRAS_API_KEY not found in Secrets.")
+# 3. Get the API Keys securely
+os.environ['CEREBRAS_API_KEY'] = userdata.get('CEREBRAS_API_KEY')
+os.environ['GEMINI_API_KEY'] = userdata.get('GEMINI_API_KEY')
 
-# 4. Run the main script, passing the key as an argument
-!python main.py "$api_key"
+# 4. Run the main script
+# To run full pipeline:
+!python main.py
+
+# To run ONLY the VLM generation step:
+# !python main.py --step vlm
 ```
 
 ## 📂 Project Structure
@@ -142,7 +165,7 @@ except Exception:
 ```
 Project_Root/
 ├── config.yaml              # Central configuration settings
-├── main.py                  # Entry point script
+├── main.py                  # Entry point script (CLI enabled)
 ├── videos_link.txt          # Input: List of YouTube URLs
 ├── www.youtube.com_cookies.txt  # Input: Cookies for auth (User provided)
 ├── dataset_info.csv         # Output: Final Summary CSV
@@ -151,13 +174,15 @@ Project_Root/
 │   ├── downloader.py        # yt-dlp & FFmpeg logic
 │   ├── cleaner.py           # Duration filtering
 │   ├── transcriber.py       # Whisper logic
-│   ├── refiner.py           # LLM logic
-│   └── summarizer.py        # CSV merging logic
+│   ├── refiner.py           # LLM logic (Cerebras)
+│   ├── summarizer.py        # CSV merging logic
+│   └── vlm_generator.py     # VLM Dataset logic (Gemini)
 │
-├── videos/                  # Stores metadata CSV
+├── videos/                  # Stores raw video & metadata
 ├── audio/                   # Stores audio files
 ├── transcripts/             # Stores raw JSON
-└── refined_transcripts/     # Stores final TXT files & logs
+├── refined_transcripts/     # Stores refined TXT files & logs
+└── vlm_dataset/             # Stores final JSONL datasets & VLM logs
 ```
 
 ## ⚠️ Common Issues
