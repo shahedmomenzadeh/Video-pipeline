@@ -224,12 +224,16 @@ def run_vlm_generation_pipeline(dataset_summary_path, refined_dir, output_dir, a
     existing_files = set(os.listdir(output_dir))
     
     # We also check the CSV log to see if we explicitly REJECTED/SKIPPED specific IDs before
+    # FIX: We only count it as "processed" if the status is ACCEPTED or REJECTED.
+    # If the status is ERROR_GENERATION, we want to retry it.
     processed_log_ids = set()
     if os.path.exists(log_file_path):
         try:
             log_df = pd.read_csv(log_file_path)
-            # Ensure we treat log IDs as strings
-            processed_log_ids = set(log_df['video_id'].astype(str))
+            # Filter rows where the job was truly finished (Successful or permanently Rejected)
+            finished_df = log_df[log_df['status'].isin(['ACCEPTED', 'REJECTED'])]
+            processed_log_ids = set(finished_df['video_id'].astype(str))
+            print(f"ℹ️ Resuming... {len(processed_log_ids)} completed videos found in log.")
         except Exception:
             pass
 
@@ -263,7 +267,7 @@ def run_vlm_generation_pipeline(dataset_summary_path, refined_dir, output_dir, a
             continue
 
         # --- CHECK 2: Log History ---
-        # If we logged this ID as processed (even if rejected), skip.
+        # If we logged this ID as successfully processed or definitively rejected, skip.
         if video_id in processed_log_ids:
             # tqdm.write(f"  ⏩ Skipping {video_id} (Found in log)")
             already_done_count += 1
@@ -320,8 +324,8 @@ def run_vlm_generation_pipeline(dataset_summary_path, refined_dir, output_dir, a
             continue
 
         # --- STEP 2: GENERATOR ---
-        sleep_time = 50
-        tqdm.write(f"  ⏳ Sleeping for {sleep_time}s before VLM generation...")
+        sleep_time = 50 # seconds
+        tqdm.write(f" ⏳ Waiting {sleep_time}s to avoid rate limits...")
         time.sleep(sleep_time)
         tqdm.write(f"  🎥 Analyze: {video_title}")
         vlm_data = generate_vlm_entry(client, generator_model, video_url, transcript_text)
