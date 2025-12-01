@@ -4,6 +4,8 @@ directories:
   audio: "./audio"
   transcripts: "./transcripts"
   refined_transcripts: "./refined_transcripts"
+  vlm_dataset: "./vlm_dataset"
+
 
 # Files
 files:
@@ -28,3 +30,10 @@ cerebras:
   api_call_delay_seconds: 20
   max_files_per_run: 300
   # Set CEREBRAS_API_KEY in your environment variables or .env file
+
+# VLM Dataset Generation Settings
+vlm:
+  gatekeeper_model: "gemini-2.0-flash" 
+  generator_model: "gemini-2.5-pro" 
+  aggregate_file: "vlm_dataset_all.jsonl"
+  log_file: "process_log.csv"

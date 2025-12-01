@@ -2,7 +2,8 @@
 import yaml
 import os
 import sys
-from modules import downloader, cleaner, transcriber, refiner, summarizer
+import argparse
+from modules import downloader, cleaner, transcriber, refiner, summarizer, vlm_generator
 
 def load_config(config_path="config.yaml"):
     if not os.path.exists(config_path):
@@ -12,23 +13,29 @@ def load_config(config_path="config.yaml"):
         return yaml.safe_load(f)
 
 def load_video_links(file_path):
-    """Reads a text file and returns a list of non-empty URLs."""
     if not os.path.exists(file_path):
         print(f"⚠️ Warning: Video links file not found at {file_path}")
         return []
-    
     with open(file_path, 'r') as f:
-        # Read lines, strip whitespace, and ignore empty lines or comments
         links = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-    
     print(f"ℹ️ Loaded {len(links)} URL(s) from {file_path}")
     return links
 
 def main():
-    # 1. Load Config
+    # 1. Parse Command Line Arguments
+    parser = argparse.ArgumentParser(description="Video Processing Pipeline")
+    parser.add_argument(
+        "--step", 
+        type=str, 
+        default="all", 
+        choices=["all", "download", "clean", "transcribe", "refine", "summarize", "vlm"],
+        help="Specific pipeline step to run. Default is 'all' (runs sequentially)."
+    )
+    args = parser.parse_args()
+
+    # 2. Load Config
     config = load_config()
     
-    # Path definitions from config
     videos_dir = config['directories']['videos']
     audio_dir = config['directories']['audio']
     transcripts_dir = config['directories']['transcripts']
@@ -41,63 +48,57 @@ def main():
     summary_file = config['files']['dataset_summary']
 
     print("============================================")
-    print("   VIDEO PROCESSING PIPELINE STARTED")
+    print(f"   VIDEO PIPELINE STARTED (Step: {args.step.upper()})")
     print("============================================")
 
-    # 2. Run Downloader & Audio Extractor
-    print("\n[Step 1/5] Running Downloader...")
+    # Step 1: Downloader
+    if args.step in ['all', 'download']:
+        print("\n[Step 1/6] Running Downloader...")
+        video_urls = load_video_links(links_file)
+        if video_urls:
+            downloader.run_downloader_pipeline(video_urls, videos_dir, audio_dir, metadata_file, cookies_file)
+        else:
+            print("❌ No URLs found. Skipping.")
+
+    # Step 2: Cleaner
+    if args.step in ['all', 'clean']:
+        print("\n[Step 2/6] Running Cleaner...")
+        cleaner.run_cleaner_pipeline(metadata_file, videos_dir, audio_dir, config['download']['max_duration_seconds'], auto_confirm=True)
+
+    # Step 3: Transcriber
+    if args.step in ['all', 'transcribe']:
+        print("\n[Step 3/6] Running Whisper Transcriber...")
+        transcriber.transcribe_audio_files(audio_dir, transcripts_dir, config['whisper']['model_size'], config['whisper']['device'])
+
+    # Step 4: Refiner
+    if args.step in ['all', 'refine']:
+        print("\n[Step 4/6] Running LLM Refiner...")
+        refiner.run_refiner_pipeline(transcripts_dir, videos_dir, refined_dir, log_file, config['cerebras']['model'], config['cerebras']['api_call_delay_seconds'], config['cerebras']['max_files_per_run'])
+
+    # Step 5: Summarizer
+    if args.step in ['all', 'summarize']:
+        print("\n[Step 5/6] Creating Dataset Summary...")
+        summarizer.create_dataset_info(metadata_file, log_file, summary_file)
     
-    video_urls = load_video_links(links_file)
-    
-    if video_urls:
-        downloader.run_downloader_pipeline(
-            urls=video_urls,
-            videos_dir=videos_dir,
-            audio_dir=audio_dir,
-            metadata_file=metadata_file,
-            cookie_file=cookies_file
-        )
-    else:
-        print("❌ No URLs found to process. Skipping download step.")
-
-    # 3. Run Cleaner (Remove long videos)
-    print("\n[Step 2/5] Running Cleaner...")
-    cleaner.run_cleaner_pipeline(
-        metadata_file=metadata_file,
-        videos_dir=videos_dir,
-        audio_dir=audio_dir,
-        max_duration_seconds=config['download']['max_duration_seconds'],
-        auto_confirm=True 
-    )
-
-    # 4. Run Transcriber
-    print("\n[Step 3/5] Running Whisper Transcriber...")
-    transcriber.transcribe_audio_files(
-        input_dir=audio_dir,
-        output_dir=transcripts_dir,
-        model_size=config['whisper']['model_size'],
-        device=config['whisper']['device']
-    )
-
-    # 5. Run Refiner (LLM)
-    print("\n[Step 4/5] Running LLM Refiner...")
-    refiner.run_refiner_pipeline(
-        input_dir=transcripts_dir,
-        videos_dir=videos_dir,
-        refined_output_dir=refined_dir,
-        log_path=log_file,
-        model_name=config['cerebras']['model'],
-        delay=config['cerebras']['api_call_delay_seconds'],
-        max_files=config['cerebras']['max_files_per_run']
-    )
-
-    # 6. Run Summarizer
-    print("\n[Step 5/5] Creating Dataset Summary...")
-    summarizer.create_dataset_info(
-        metadata_path=metadata_file,
-        log_path=log_file,
-        output_file=summary_file
-    )
+    # Step 6: VLM Generator
+    if args.step in ['all', 'vlm']:
+        if 'vlm' in config:
+            print("\n[Step 6/6] Generating VLM Fine-Tuning Dataset...")
+            
+            # New Output Directory
+            vlm_dir = config['directories']['vlm_dataset']
+            
+            vlm_generator.run_vlm_generation_pipeline(
+                dataset_summary_path=summary_file,
+                refined_dir=refined_dir,
+                output_dir=vlm_dir,
+                aggregate_filename=config['vlm']['aggregate_file'],
+                log_filename=config['vlm']['log_file'],
+                gatekeeper_model=config['vlm']['gatekeeper_model'],
+                generator_model=config['vlm']['generator_model']
+            )
+        else:
+            print("\n⚠️ Skipping VLM Generation (Config missing)")
 
     print("\n============================================")
     print("   PIPELINE COMPLETED SUCCESSFULLY")
