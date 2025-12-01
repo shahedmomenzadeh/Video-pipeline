@@ -21,8 +21,8 @@ Before running the project, ensure you have the following installed:
 
 - **Python 3.8+**
 - **FFmpeg**: This is critical for audio extraction.
-  - Ubuntu/Debian: `sudo apt update && sudo apt install ffmpeg`
-  - MacOS: `brew install ffmpeg`
+  - Ubuntu/Debian: ```sudo apt update && sudo apt install ffmpeg```
+  - MacOS: ```brew install ffmpeg```
   - Windows: Download FFmpeg and add it to your System PATH.
 - **API Keys**:
   - **Cerebras API Key**: For the text refinement step.
