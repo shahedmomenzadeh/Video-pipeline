@@ -39,3 +39,6 @@ __pycache__/
 
 # ignoring tests
 apitest.py
+
+# ignore jsonl files
+*.jsonl
