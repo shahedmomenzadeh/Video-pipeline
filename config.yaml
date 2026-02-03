@@ -41,6 +41,7 @@ vlm:
 
 # Adverse Event Detector Settings
 adverse_event:
-  model: "gemini-2.5-flash" # Fast model is sufficient for text analysis
+  # model: "gemini-3-flash-preview" # Fast model is sufficient for text analysis
+  model: "gemini-2.5-flash"
   aggregate_file: "adverse_events_all.jsonl"
   log_file: "adverse_event_log.csv"

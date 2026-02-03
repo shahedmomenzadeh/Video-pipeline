@@ -16,18 +16,26 @@ Task: Analyze the provided chronological list of surgical steps (visual descript
 Input Data:
 You will receive a list of steps. Each step has a timestamp and a visual description of the surgical action derived from the video.
 
-Adverse Events to Look For (but not limited to):
-1. Posterior Capsule Rupture (PCR): Look for "vitreous loss", "vitreous prolapse", "sulcus placement", "anterior vitrectomy", "capsule tear", "nucleus drop".
-2. Iris Prolapse: Iris tissue protruding through incisions.
-3. Zonular Dialysis/Dehiscence: Lens instability, capsular tension ring (CTR) insertion (if used for complication management).
-4. Corneal Burns/Edema: Whitening of incision site.
-5. Hyphema: Bleeding in the anterior chamber.
-6. Dropped Nucleus/Fragment: Lens material falling into vitreous.
-7. IOL Complications: IOL haptic breakage, reverse implantation require explanation.
+Adverse Events to Look For:
+You must strictly identify only the following complications based on the visual descriptions provided:
+
+1. Intra-operative Complications:
+   - Iris Prolapse: Protrusion of iris tissue through the surgical wound (main or side port).
+   - Zonular Dialysis: Partial or complete rupture of zonular fibers, leading to lens instability, equator visibility, or decentration.
+   - IFIS (Intraoperative Floppy Iris Syndrome): Look for triad of signs: billowing iris stroma, iris prolapse, or progressive miosis (constriction).
+   - Phaco Wound Burn: Thermal injury at the corneal incision characterized by whitening or graying of the wound edges.
+   - Posterior Capsule Rupture (PCR): Breach of the posterior capsule. Look for "vitreous loss", "vitreous prolapse", "sulcus placement of IOL", "anterior vitrectomy", or "capsule tear".
+   - Vitreous Loss: Vitreous humor entering the anterior chamber or exiting the eye (usually secondary to PCR).
+   - Nucleus Drop: Lens nucleus or large fragments falling posteriorly into the vitreous cavity.
+   - IOL Drop: Dislocation of the intraocular lens (IOL) into the vitreous.
+
+2. Retinal / Posterior Segment Complications:
+   - Peripheral Retinal Tear: Visible break in the peripheral retina (may be mentioned if view extends to fundus or red reflex changes significantly).
+   - Retinal Hemorrhage: Bleeding visible in the posterior segment or retina.
 
 Instructions:
 - Analyze the text strictly. Do not hallucinate events not described.
-- If a description implies a complication (e.g., "anterior vitrectomy cutter introduced"), infer the preceding event (e.g., vitreous loss).
+- Infer complications from management actions: If the text describes "anterior vitrectomy", "sulcus IOL implantation", or "limbal approach for vitrectomy", you MUST infer that a Posterior Capsule Rupture (PCR) or Vitreous Loss occurred, even if the rupture itself wasn't explicitly described.
 - If NO adverse events are found, return an empty list for "adverse_events".
 
 Output Format:
@@ -202,10 +210,11 @@ def run_adverse_event_pipeline(vlm_input_dir, output_dir, log_filename, aggregat
             continue
 
         # --- STEP 2: LLM ANALYSIS ---
-        # 1s delay to be safe with rate limits
-        time.sleep(1)
+
         
         result = detect_adverse_events(client, model_name, visual_context)
+        # 30s delay to be safe with rate limits
+        time.sleep(30)
 
         if result is None:
             # API Error
