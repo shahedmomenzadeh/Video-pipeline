@@ -5,6 +5,7 @@ directories:
   transcripts: "./transcripts"
   refined_transcripts: "./refined_transcripts"
   vlm_dataset: "./vlm_dataset"
+  adverse_events: "./adverse_events" # New output directory
 
 
 # Files
@@ -37,3 +38,10 @@ vlm:
   generator_model: "gemini-2.5-pro" 
   aggregate_file: "vlm_dataset_all.jsonl"
   log_file: "process_log.csv"
+
+# Adverse Event Detector Settings
+adverse_event:
+  # model: "gemini-3-flash-preview" # Fast model is sufficient for text analysis
+  model: "gemini-2.5-flash"
+  aggregate_file: "adverse_events_all.jsonl"
+  log_file: "adverse_event_log.csv"

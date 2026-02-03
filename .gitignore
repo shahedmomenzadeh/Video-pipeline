@@ -42,3 +42,6 @@ apitest.py
 
 # ignore jsonl files
 *.jsonl
+
+clean_log.py
+video_overlay.py

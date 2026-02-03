@@ -324,12 +324,11 @@ def run_vlm_generation_pipeline(dataset_summary_path, refined_dir, output_dir, a
             continue
 
         # --- STEP 2: GENERATOR ---
-        sleep_time = 50 # seconds
-        tqdm.write(f" ⏳ Waiting {sleep_time}s to avoid rate limits...")
-        time.sleep(sleep_time)
         tqdm.write(f"  🎥 Analyze: {video_title}")
         vlm_data = generate_vlm_entry(client, generator_model, video_url, transcript_text)
-
+        sleep_time = 60 # seconds
+        tqdm.write(f" ⏳ Waiting {sleep_time}s to avoid rate limits...")
+        time.sleep(sleep_time)
         if vlm_data:
             final_entry = {
                 "video_id": video_id,
