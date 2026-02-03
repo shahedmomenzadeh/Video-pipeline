@@ -2,11 +2,11 @@
 
 This project is a comprehensive pipeline designed to create high-quality text and Vision-Language Model (VLM) datasets from YouTube videos (specifically targeted at medical/surgical content, but applicable generally).
 
-The pipeline automates the process of downloading videos, extracting audio, transcribing speech using OpenAI Whisper, refining the text using the Cerebras LLM, and generating a structured VLM dataset using Google Gemini models.
+The pipeline automates the process of downloading videos, extracting audio, transcribing speech using OpenAI Whisper, refining the text using the Cerebras LLM, generating a structured VLM dataset using Google Gemini models, and detecting surgical adverse events.
 
 ## 🚀 Features
 
-The pipeline runs in 6 sequential steps:
+The pipeline runs in 7 sequential steps:
 
 1. **Ingestion**: Downloads videos and extracts audio (16kHz WAV) using yt-dlp and FFmpeg.
 2. **Hygiene**: Automatically deletes videos that exceed a specific duration threshold (to avoid processing overly long files).
@@ -14,6 +14,7 @@ The pipeline runs in 6 sequential steps:
 4. **Refinement**: Uses the Cerebras LLM to correct grammar and medical terminology while preserving timestamps.
 5. **Reporting**: Merges metadata and processing logs into a final `dataset_info.csv` summary file.
 6. **VLM Dataset Generation**: Uses a two-stage Google Gemini pipeline (Gatekeeper & Analyst) to generate a structured JSONL dataset for VLM fine-tuning, including visual descriptions, surgical steps, and instrument identification.
+7. **Adverse Event Detection**: Analyzes VLM annotations to identify intraoperative complications (e.g., zonular dialysis, posterior capsule rupture, iris prolapse) using Google Gemini's safety analysis model.
 
 ## 🛠️ Prerequisites
 
@@ -26,7 +27,7 @@ Before running the project, ensure you have the following installed:
   - Windows: Download FFmpeg and add it to your System PATH.
 - **API Keys**:
   - **Cerebras API Key**: For the text refinement step.
-  - **Google Gemini API Key**: For the VLM dataset generation step.
+  - **Google Gemini API Key**: For the VLM dataset generation and adverse event detection steps.
 
 ## 📥 Installation
 
@@ -58,7 +59,8 @@ directories:
   audio: "./audio"                # Where extracted WAV files are stored
   transcripts: "./transcripts"    # Raw Whisper JSON outputs
   refined_transcripts: "./refined_transcripts" # Final LLM-cleaned text
-  vlm_dataset: "./vlm_dataset"    # New: Where JSONL files are stored
+  vlm_dataset: "./vlm_dataset"    # Where JSONL files are stored
+  adverse_events: "./adverse_events" # Where adverse event analysis results are stored
 
 # Download Settings
 download:
@@ -69,12 +71,18 @@ whisper:
   model_size: "large"             # Options: tiny, base, small, medium, large
   device: "cuda"                  # Use 'cuda' for GPU, 'cpu' for CPU
 
-# VLM Settings (New)
+# VLM Settings
 vlm:
   gatekeeper_model: "gemini-2.0-flash" # Fast model for quality checks
   generator_model: "gemini-2.0-flash"  # Powerful model for video analysis
   aggregate_file: "vlm_dataset_all.jsonl"
   log_file: "process_log.csv"
+
+# Adverse Event Detection Settings
+adverse_event:
+  model: "gemini-2.0-flash"       # Gemini model for safety analysis
+  aggregate_file: "adverse_events_all.jsonl" # Aggregate file for all detected events
+  log_file: "adverse_event_log.csv" # Log file tracking analysis results
 ```
 
 ### 2. Adding Video Links
@@ -111,19 +119,19 @@ GEMINI_API_KEY=your_gemini_key
 
 You can run the entire pipeline or specific steps using the `--step` argument.
 
-**Run Everything (Steps 1-6):**
+**Run Everything (Steps 1-7):**
 
 ```bash
 python main.py
 ```
 
-**Run Only the VLM Step:**
+**Run Only the Adverse Event Detection Step:**
 
 ```bash
-python main.py --step vlm
+python main.py --step adverse_event
 ```
 
-**Available Steps:** `download`, `clean`, `transcribe`, `refine`, `summarize`, `vlm`, `all`.
+**Available Steps:** `download`, `clean`, `transcribe`, `refine`, `summarize`, `vlm`, `adverse_event`, `all`.
 
 ## ☁️ How to Run in Google Colab
 
@@ -156,8 +164,8 @@ os.environ['GEMINI_API_KEY'] = userdata.get('GEMINI_API_KEY')
 # To run full pipeline:
 !python main.py
 
-# To run ONLY the VLM generation step:
-# !python main.py --step vlm
+# To run ONLY the adverse event detection step:
+# !python main.py --step adverse_event
 ```
 
 ## 📂 Project Structure
@@ -176,14 +184,50 @@ Project_Root/
 │   ├── transcriber.py       # Whisper logic
 │   ├── refiner.py           # LLM logic (Cerebras)
 │   ├── summarizer.py        # CSV merging logic
-│   └── vlm_generator.py     # VLM Dataset logic (Gemini)
+│   ├── vlm_generator.py     # VLM Dataset logic (Gemini)
+│   └── adverse_event_detector.py # Surgical safety analysis (Gemini)
 │
 ├── videos/                  # Stores raw video & metadata
 ├── audio/                   # Stores audio files
 ├── transcripts/             # Stores raw JSON
 ├── refined_transcripts/     # Stores refined TXT files & logs
-└── vlm_dataset/             # Stores final JSONL datasets & VLM logs
+├── vlm_dataset/             # Stores final JSONL datasets & VLM logs
+└── adverse_events/          # Stores adverse event analysis results & logs
 ```
+
+## 🔍 Adverse Event Detection Details
+
+### Overview
+
+The Adverse Event Detector (Step 7) analyzes VLM-annotated surgical videos to identify intraoperative complications. It uses Google Gemini to process visual descriptions and detect safety-critical events.
+
+### Detected Complications
+
+The module identifies the following surgical adverse events:
+
+**Intraoperative Complications:**
+- Iris Prolapse
+- Zonular Dialysis
+- IFIS (Intraoperative Floppy Iris Syndrome)
+- Phaco Wound Burn
+- Posterior Capsule Rupture (PCR)
+- Vitreous Loss
+- Nucleus Drop
+- IOL Drop
+
+**Retinal/Posterior Segment Complications:**
+- Peripheral Retinal Tear
+- Retinal Hemorrhage
+
+### Output Files
+
+- **Individual JSONL Files**: One file per detected adverse event (e.g., `video_001.jsonl`)
+- **Aggregate JSONL**: `adverse_events_all.jsonl` containing all detected events
+- **Log CSV**: `adverse_event_log.csv` tracking analysis status, event counts, and timestamps
+
+### Resume Logic
+
+The detector includes automatic resume capability. If processing is interrupted, it will skip videos already analyzed (marked as `DETECTED` or `NO_EVENT` in the log) and continue from where it left off.
 
 ## ⚠️ Common Issues
 
