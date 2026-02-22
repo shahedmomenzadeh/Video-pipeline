@@ -3,7 +3,7 @@ import yaml
 import os
 import sys
 import argparse
-from modules import downloader, cleaner, transcriber, refiner, summarizer, vlm_generator, adverse_event_detector
+from modules import downloader, cleaner, transcriber, refiner, summarizer, vlm_generator, adverse_event_detector, splitter
 
 def load_config(config_path="config.yaml"):
     if not os.path.exists(config_path):
@@ -28,7 +28,7 @@ def main():
         "--step", 
         type=str, 
         default="all", 
-        choices=["all", "download", "clean", "transcribe", "refine", "summarize", "vlm", "adverse_event"],
+        choices=["all", "download", "clean", "transcribe", "refine", "summarize", "vlm", "adverse_event", "split"],
         help="Specific pipeline step to run. Default is 'all' (runs sequentially)."
     )
     args = parser.parse_args()
@@ -53,7 +53,7 @@ def main():
 
     # Step 1: Downloader
     if args.step in ['all', 'download']:
-        print("\n[Step 1/7] Running Downloader...")
+        print("\n[Step 1/8] Running Downloader...")
         video_urls = load_video_links(links_file)
         if video_urls:
             downloader.run_downloader_pipeline(video_urls, videos_dir, audio_dir, metadata_file, cookies_file)
@@ -62,32 +62,29 @@ def main():
 
     # Step 2: Cleaner
     if args.step in ['all', 'clean']:
-        print("\n[Step 2/7] Running Cleaner...")
+        print("\n[Step 2/8] Running Cleaner...")
         cleaner.run_cleaner_pipeline(metadata_file, videos_dir, audio_dir, config['download']['max_duration_seconds'], auto_confirm=True)
 
     # Step 3: Transcriber
     if args.step in ['all', 'transcribe']:
-        print("\n[Step 3/7] Running Whisper Transcriber...")
+        print("\n[Step 3/8] Running Whisper Transcriber...")
         transcriber.transcribe_audio_files(audio_dir, transcripts_dir, config['whisper']['model_size'], config['whisper']['device'])
 
     # Step 4: Refiner
     if args.step in ['all', 'refine']:
-        print("\n[Step 4/7] Running LLM Refiner...")
+        print("\n[Step 4/8] Running LLM Refiner...")
         refiner.run_refiner_pipeline(transcripts_dir, videos_dir, refined_dir, log_file, config['cerebras']['model'], config['cerebras']['api_call_delay_seconds'], config['cerebras']['max_files_per_run'])
 
     # Step 5: Summarizer
     if args.step in ['all', 'summarize']:
-        print("\n[Step 5/7] Creating Dataset Summary...")
+        print("\n[Step 5/8] Creating Dataset Summary...")
         summarizer.create_dataset_info(metadata_file, log_file, summary_file)
     
     # Step 6: VLM Generator
     if args.step in ['all', 'vlm']:
         if 'vlm' in config:
-            print("\n[Step 6/7] Generating VLM Fine-Tuning Dataset...")
-            
-            # New Output Directory
+            print("\n[Step 6/8] Generating VLM Fine-Tuning Dataset...")
             vlm_dir = config['directories']['vlm_dataset']
-            
             vlm_generator.run_vlm_generation_pipeline(
                 dataset_summary_path=summary_file,
                 refined_dir=refined_dir,
@@ -103,7 +100,7 @@ def main():
     # Step 7: Adverse Event Detector
     if args.step in ['all', 'adverse_event']:
         if 'adverse_event' in config:
-            print("\n[Step 7/7] Running Adverse Event Detector...")
+            print("\n[Step 7/8] Running Adverse Event Detector...")
             adverse_event_detector.run_adverse_event_pipeline(
                 vlm_input_dir=config['directories']['vlm_dataset'],
                 output_dir=config['directories']['adverse_events'],
@@ -113,6 +110,19 @@ def main():
             )
         else:
             print("\n⚠️ Skipping Adverse Event Detection (Config missing)")
+
+    # Step 8: Video Splitter
+    if args.step in ['all', 'split']:
+        if 'splitter' in config:
+            print("\n[Step 8/8] Running Video Splitter...")
+            splitter.run_splitter_pipeline(
+                vlm_input_dir=config['directories']['vlm_dataset'],
+                videos_dir=config['directories']['videos'],
+                output_dir=config['directories']['clips'],
+                log_filename=config['splitter']['log_file']
+            )
+        else:
+            print("\n⚠️ Skipping Video Splitting (Config missing)")
 
     print("\n============================================")
     print("   PIPELINE COMPLETED SUCCESSFULLY")

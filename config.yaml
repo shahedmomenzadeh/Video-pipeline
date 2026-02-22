@@ -5,16 +5,17 @@ directories:
   transcripts: "./transcripts"
   refined_transcripts: "./refined_transcripts"
   vlm_dataset: "./vlm_dataset"
-  adverse_events: "./adverse_events" # New output directory
+  adverse_events: "./adverse_events"
+  clips: "./clip_dataset"
 
 
 # Files
 files:
-  metadata_csv: "video_metadata.csv" # Will be joined with video directory path
+  metadata_csv: "video_metadata.csv"
   cookies: "www.youtube.com_cookies.txt"
-  refinement_log: "refinement_log.csv" # Will be joined with refined directory path
-  video_links: "videos_link.txt" # File containing one URL per line
-  dataset_summary: "dataset_info.csv" # The final summary file name
+  refinement_log: "refinement_log.csv"
+  video_links: "videos_link.txt"
+  dataset_summary: "dataset_info.csv"
 
 # Download Settings
 download:
@@ -30,7 +31,6 @@ cerebras:
   model: "qwen-3-235b-a22b-instruct-2507"
   api_call_delay_seconds: 20
   max_files_per_run: 300
-  # Set CEREBRAS_API_KEY in your environment variables or .env file
 
 # VLM Dataset Generation Settings
 vlm:
@@ -41,7 +41,10 @@ vlm:
 
 # Adverse Event Detector Settings
 adverse_event:
-  # model: "gemini-3-flash-preview" # Fast model is sufficient for text analysis
   model: "gemini-2.5-flash"
   aggregate_file: "adverse_events_all.jsonl"
   log_file: "adverse_event_log.csv"
+
+# Splitter Settings
+splitter:
+  log_file: "split_log.csv"
