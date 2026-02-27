@@ -50,3 +50,8 @@ playground.ipynb
 downsample_videos.py
 reporter.py
 video_annotation.py
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
