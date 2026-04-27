@@ -6,7 +6,8 @@ cerebras_cloud_sdk
 tqdm
 python-dotenv
 pyyaml
-
+openai
+pydantic
 # Google GenAI SDK
 google-genai
 

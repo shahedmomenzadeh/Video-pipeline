@@ -3,7 +3,7 @@ import yaml
 import os
 import sys
 import argparse
-from modules import downloader, cleaner, transcriber, refiner, summarizer, vlm_generator, adverse_event_detector, splitter
+from modules import downloader, cleaner, transcriber, refiner, summarizer, vlm_generator, adverse_event_detector, splitter, dataset_formatter
 
 def load_config(config_path="config.yaml"):
     if not os.path.exists(config_path):
@@ -25,12 +25,12 @@ def main():
     # 1. Parse Command Line Arguments
     parser = argparse.ArgumentParser(description="Video Processing Pipeline")
     parser.add_argument(
-        "--step", 
-        type=str, 
-        default="all", 
-        choices=["all", "download", "clean", "transcribe", "refine", "summarize", "vlm", "adverse_event", "split"],
-        help="Specific pipeline step to run. Default is 'all' (runs sequentially)."
-    )
+            "--step", 
+            type=str, 
+            default="all", 
+            choices=["all", "download", "clean", "transcribe", "refine", "summarize", "vlm", "adverse_event", "split", "format"],
+            help="Specific pipeline step to run."
+        )
     args = parser.parse_args()
 
     # 2. Load Config
@@ -123,6 +123,23 @@ def main():
             )
         else:
             print("\n⚠️ Skipping Video Splitting (Config missing)")
+    
+    # Step 9: Dataset Formatter (SFT & GRPO)
+    if args.step in ['all', 'format']:
+        if 'dataset_formatter' in config:
+            print("\n[Step 9/9] Generating Training Datasets (SFT & GRPO)...")
+            dataset_formatter.run_dataset_formatter(
+                clips_dir=config['directories']['clips'],
+                output_dir=config['dataset_formatter']['output_dir'],
+                model_name=config['dataset_formatter']['model'],
+                base_url=config['dataset_formatter']['base_url'],
+                api_key=config['dataset_formatter']['api_key'],
+                log_filename=config['dataset_formatter']['log_file'],
+                split_filename=config['dataset_formatter']['split_file'],
+                max_retries=config['dataset_formatter']['max_retries']
+            )
+        else:
+            print("\n⚠️ Skipping Dataset Formatting (Config missing)")
 
     print("\n============================================")
     print("   PIPELINE COMPLETED SUCCESSFULLY")

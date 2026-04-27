@@ -48,3 +48,14 @@ adverse_event:
 # Splitter Settings
 splitter:
   log_file: "split_log.csv"
+
+
+# Dataset Formatter Settings (SFT & GRPO)
+dataset_formatter:
+  output_dir: "./training_datasets"
+  model: "gemini-3-flash-preview"
+  base_url: "https://api.gapgpt.app/v1"
+  api_key: "sk-XoUOvScrI3I1MmPECjgxP0vUePTxLenGd9fydIgaJdMVruQD"
+  log_file: "dataset_formatter_log.csv"
+  split_file: "dataset_split.json"
+  max_retries: 3
