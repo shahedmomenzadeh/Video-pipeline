@@ -45,6 +45,10 @@ apitest.py
 
 clean_log.py
 video_overlay.py
+apply_mapping_all.py
+dataset_report.html
+generate_report.py
+replace_clip.py
 
 playground.ipynb
 downsample_videos.py
